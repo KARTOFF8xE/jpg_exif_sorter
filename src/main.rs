@@ -38,14 +38,14 @@ impl Picture {
         };
 
         Picture { path: i.to_string(), date: "Date".to_string(),
-                is_picture: i.contains(".jpeg") || i.contains(".png") || i.contains(".jpg"), timestamp: None}
+                is_picture: i.contains(".jpg"), timestamp: None}
     }
 
     fn printer(v: Vec<Self>) {
         println!("The EXIF-Data of the Pictures told me:");
         for p in v {
             if p.is_picture {
-                println!("Path: {}\n\tDate: {}\n\tTimeStamp: {}", p.path, p.date,
+                println!("Path: {}\n\tDate: {}\n\t\tTimeStamp: {}", p.path, p.date,
                     match p.timestamp {
                         Some(i) => i.to_string(),
                         None => "No TimeStamp".to_string(),
@@ -56,7 +56,7 @@ impl Picture {
     }
 }
 
-fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .png um
+fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .JPEG um
     let mut files: Vec<Picture> = Vec::new();
     let paths = fs::read_dir("./").expect("Couldn't read Paths");
 
@@ -74,28 +74,27 @@ fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .png u
     let mut pictures: Vec<Picture> = Vec::new();
     for mut p in files {
         if p.is_picture {
-            let i = match Picture::convert(&p.path) {
-                Ok(i) => i,
-                Err(_) => panic!("Not able to convert")
-            };
+                let i = match Picture::convert(&p.path) {
+                    Ok(i) => i,
+                    Err(_) => panic!("Unable to convert")
+                };
             p.path = i;
 
             pictures.push(p);
         }
     }
-
     pictures
 }
 
 fn sort_pictures(pictures: &mut Vec<Picture>) {
     for picture in pictures.iter_mut() {
-        //-----------
-        println!("{:?}", picture.path);
 
-        //-----------
-
-        let file = File::open(str::replace(picture.path.as_str(), "JPEG", "jpg")).expect("Unable to open File for Sorting");
-        let exif = Reader::new().read_from_container(&mut BufReader::new(&file)).expect("Unable to start Reader");
+        let file = File::open(str::replace(picture.path
+                        .as_str(), "JPEG", "jpg"))
+                        .expect("Unable to open File for Sorting");
+        let exif = Reader::new()
+                        .read_from_container(&mut BufReader::new(&file))
+                        .expect("Unable to start Reader");
 
         let tag = Tag::DateTime;
         if let Some(field) = exif.get_field(tag, In::PRIMARY) {
