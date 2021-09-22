@@ -45,19 +45,27 @@ impl Picture {
 }
 
 fn get_pictures() -> Vec<Picture> {
-    let mut pictures: Vec<Picture> = Vec::new();
+    let mut files: Vec<Picture> = Vec::new();
     let paths = fs::read_dir("./").expect("Couldn't read Paths");
 
     println!("I can see the following Data: ");
     for path in paths {
         println!("Name: {}", path.as_ref().unwrap().path().display());
-        pictures.push(
+        files.push(
             match path {
                 Ok(pic) => Picture::new(pic.file_name().to_str()),
                 Err(_) => panic!("Found invalid path"),
             }
         );
     }
+
+    let mut pictures: Vec<Picture> = Vec::new();
+    for p in files {
+        if p.is_picture {
+            pictures.push(p);
+        }
+    }
+
     pictures
 }
 
