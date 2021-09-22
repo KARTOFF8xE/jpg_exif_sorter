@@ -45,7 +45,7 @@ impl Picture {
     }
 }
 
-fn get_pictures() -> Vec<Picture> {
+fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .png um
     let mut files: Vec<Picture> = Vec::new();
     let paths = fs::read_dir("./").expect("Couldn't read Paths");
 
