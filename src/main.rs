@@ -1,11 +1,15 @@
+extern crate exif;
+
 use core::panic;
-use std::{fs::{self}};
+use std::{fs::{{self}, File}};
+use std::io::{{self}, BufReader};
+use exif::{In, Reader, Tag};
 use image::{ImageError, io::Reader as ImageReader};
 
 struct Picture {
     path: String,
     date: String,
-    time: String,
+    timestamp: Option<i64>,
     is_picture: bool,
 }
 
@@ -20,7 +24,7 @@ impl Picture {
             if c == '.' { break; }
             new_path.next_back();
         };
-        let new_path = format!("{}png", new_path.as_str());
+        let new_path = format!("{}JPEG", new_path.as_str());
         img.save(new_path.as_str()).expect("Couldn't save the Image");
         println!("-> {}", new_path);
         Ok(new_path.as_str().to_string())
@@ -33,14 +37,21 @@ impl Picture {
             None => panic!("found Invalid Name"),
         };
 
-        Picture { path: i.to_string(), date: "Date".to_string(), time: "Time".to_string(),
-                is_picture: i.contains(".jpeg") || i.contains(".png") || i.contains(".jpg") }
+        Picture { path: i.to_string(), date: "Date".to_string(),
+                is_picture: i.contains(".jpeg") || i.contains(".png") || i.contains(".jpg"), timestamp: None}
     }
 
     fn printer(v: Vec<Self>) {
         println!("The EXIF-Data of the Pictures told me:");
         for p in v {
-            if p.is_picture { println!("Path: {}\n\tDate: {}\n\tTime: {}", p.path, p.date, p.time); }
+            if p.is_picture {
+                println!("Path: {}\n\tDate: {}\n\tTimeStamp: {}", p.path, p.date,
+                    match p.timestamp {
+                        Some(i) => i.to_string(),
+                        None => "No TimeStamp".to_string(),
+                    }
+                );
+            }
         }
     }
 }
@@ -76,7 +87,57 @@ fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .png u
     pictures
 }
 
+fn sort_pictures(pictures: &mut Vec<Picture>) {
+    for picture in pictures.iter_mut() {
+        let file = File::open(str::replace(picture.path.as_str(), "JPEG", "jpg")).expect("Unable to open File for Sorting");
+        let exif = Reader::new().read_from_container(&mut BufReader::new(&file)).expect("Unable to start Reader");
+
+        let tag = Tag::DateTime;
+        if let Some(field) = exif.get_field(tag, In::PRIMARY) {
+            picture.date = field.display_value().with_unit(&exif).to_string();
+            let mut tmp  = picture.date.replace("-", "");
+            tmp = tmp.replace(":", "");
+            tmp = tmp.replace(" ", "");
+            
+            picture.timestamp = match tmp.trim().parse::<i64>() {
+                    Ok(i) => Some(i),
+                    Err(_) => None,
+            }
+        }
+    }
+
+    pictures.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+
+}
+
+fn rename_pictures(pictures: &mut Vec<Picture>) {
+    println!("<NAME>-index with NAME: ");
+    let mut call: String = String::new();
+    io::stdin()
+        .read_line(&mut call)
+        .expect("Unable to read line");
+    call = call.trim().replace(" ", "");
+
+    let mut ending: String = String::from("");
+    let tmp = &pictures[0].path.chars();
+    for c in tmp.clone() {
+        if c == '.' { ending.clear(); }
+        ending.push(c);
+    }
+
+
+    let mut counter: u16   = 1;
+    for picture in pictures {
+        let new_path = format!("{}-{}{}", call, counter, ending);
+        fs::rename(&picture.path, &new_path).expect("Unable to rename Files");
+        picture.path = new_path;
+        counter += 1;
+    }
+}
+
 fn main() {
-    let v :Vec<Picture> = get_pictures();
+    let mut v :Vec<Picture> = get_pictures();
+    sort_pictures(&mut v);
+    rename_pictures(&mut v);
     Picture::printer(v);
 }
