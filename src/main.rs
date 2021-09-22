@@ -10,17 +10,17 @@ struct Picture {
 }
 
 impl Picture {
-    fn convert(&mut self) -> Result<String, ImageError>{
-        let mut new_path = self.path.chars().clone();
-        self.is_picture = true;
-        print!("Converting {} ", self.path);
-        let img = ImageReader::open(self.path.as_str())?.decode()?;
-        for c in self.path.chars().rev() {
-            if c == '.' { break }
+
+    fn convert(path: &str) -> Result<String, ImageError> {
+        let mut new_path = path.chars().clone();
+        print!("Converting {} ", path);
+        let img = ImageReader::open(path)?.decode()?;
+        
+        for c in path.chars().rev() {
+            if c == '.' { break; }
             new_path.next_back();
         };
-        let new_path = format!("{}.png", new_path.as_str());
-
+        let new_path = format!("{}png", new_path.as_str());
         img.save(new_path.as_str()).expect("Couldn't save the Image");
         println!("-> {}", new_path);
         Ok(new_path.as_str().to_string())
@@ -32,6 +32,7 @@ impl Picture {
             Some(i) => i,
             None => panic!("found Invalid Name"),
         };
+
         Picture { path: i.to_string(), date: "Date".to_string(), time: "Time".to_string(),
                 is_picture: i.contains(".jpeg") || i.contains(".png") || i.contains(".jpg") }
     }
@@ -60,8 +61,14 @@ fn get_pictures() -> Vec<Picture> {
     }
 
     let mut pictures: Vec<Picture> = Vec::new();
-    for p in files {
+    for mut p in files {
         if p.is_picture {
+            let i = match Picture::convert(&p.path) {
+                Ok(i) => i,
+                Err(_) => panic!("Not able to convert")
+            };
+            p.path = i;
+
             pictures.push(p);
         }
     }
