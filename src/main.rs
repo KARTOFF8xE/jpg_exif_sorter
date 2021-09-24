@@ -1,9 +1,11 @@
 extern crate exif;
+extern crate pbr;
 
 use core::panic;
 use std::{fs::{{self}, File}};
 use std::io::{{self}, BufReader};
 use exif::{In, Reader, Tag};
+use pbr::ProgressBar;
 use image::{ImageError, io::Reader as ImageReader};
 
 struct Picture {
@@ -17,7 +19,7 @@ impl Picture {
 
     fn convert(path: &str) -> Result<String, ImageError> {
         let mut new_path = path.chars().clone();
-        print!("Converting {} ", path);
+        //print!("Converting {} ", path);
         let img = ImageReader::open(path)?.decode()?;
         
         for c in path.chars().rev() {
@@ -26,7 +28,6 @@ impl Picture {
         };
         let new_path = format!("{}JPEG", new_path.as_str());
         img.save(new_path.as_str()).expect("Couldn't save the Image");
-        println!("-> {}", new_path);
         Ok(new_path.as_str().to_string())
     }
 
@@ -60,7 +61,7 @@ fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .JPEG 
     let mut files: Vec<Picture> = Vec::new();
     let paths = fs::read_dir("./").expect("Couldn't read Paths");
 
-    println!("I can see the following Data: ");
+    println!("I can see the following Files: ");
     for path in paths {
         println!("Name: {}", path.as_ref().unwrap().path().display());
         files.push(
@@ -71,8 +72,13 @@ fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .JPEG 
         );
     }
 
+    println!("Converting *.jpg -> *.JPEG ... start");
     let mut pictures: Vec<Picture> = Vec::new();
+    let mut pb = ProgressBar::new(files.len() as u64);
+    pb.format("╢▌▌░╟");
+
     for mut p in files {
+        pb.inc();
         if p.is_picture {
                 let i = match Picture::convert(&p.path) {
                     Ok(i) => i,
@@ -83,6 +89,8 @@ fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .JPEG 
             pictures.push(p);
         }
     }
+
+    pb.finish_println("Converting ... finished\n");
     pictures
 }
 
@@ -110,12 +118,13 @@ fn sort_pictures(pictures: &mut Vec<Picture>) {
         }
     }
 
+    print!("Sorting ... ");
     pictures.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-
+    println!("finished");
 }
 
 fn rename_pictures(pictures: &mut Vec<Picture>) {
-    println!("<NAME>-index with NAME: ");
+    println!("<NAME>_index with NAME: ");
     let mut call: String = String::new();
     io::stdin()
         .read_line(&mut call)
@@ -129,19 +138,29 @@ fn rename_pictures(pictures: &mut Vec<Picture>) {
         ending.push(c);
     }
 
-
-    let mut counter: u16   = 1;
+    let mut counter: u32 = 10000;
+    let mut pb = ProgressBar::new(pictures.len() as u64);
+    pb.format("╢▌▌░╟");
+    println!("Renaming ... start");
     for picture in pictures {
-        let new_path = format!("{}-{}{}", call, counter, ending);
+        counter += 1;
+        let c = counter.to_string();
+        let mut c = c.chars();
+        c.next();
+        let c = c.as_str();
+
+        fs::create_dir_all(format!("./{}", call)).expect("Unable to create Folder");
+        let new_path = format!("{}/{}_{}{}", call, call, c, ending);
         fs::rename(&picture.path, &new_path).expect("Unable to rename Files");
         picture.path = new_path;
-        counter += 1;
+        pb.inc();
     }
+    pb.finish_println("Renaming ... finished\n");
 }
 
 fn main() {
     let mut v :Vec<Picture> = get_pictures();
     sort_pictures(&mut v);
     rename_pictures(&mut v);
-    Picture::printer(v);
+    //Picture::printer(v);
 }
