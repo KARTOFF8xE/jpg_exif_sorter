@@ -131,7 +131,7 @@ fn rename_pictures(pictures: &mut Vec<Picture>) {
         .expect("Unable to read line");
     call = call.trim().replace(" ", "");
 
-    let mut ending: String = String::from("");
+    let mut ending: String = String::new();
     let tmp = &pictures[0].path.chars();
     for c in tmp.clone() {
         if c == '.' { ending.clear(); }
@@ -151,7 +151,12 @@ fn rename_pictures(pictures: &mut Vec<Picture>) {
 
         fs::create_dir_all(format!("./{}", call)).expect("Unable to create Folder");
         let new_path = format!("{}/{}_{}{}", call, call, c, ending);
-        fs::rename(&picture.path, &new_path).expect("Unable to rename Files");
+        
+        fs::rename(&picture.path
+                .replace(".JPEG", ".jpg"), 
+            &new_path
+                .replace(".JPEG", ".jpg"))
+            .expect("Unable to rename Files");
         picture.path = new_path;
         pb.inc();
     }
@@ -159,6 +164,7 @@ fn rename_pictures(pictures: &mut Vec<Picture>) {
 }
 
 fn main() {
+    println!("Hi, I order your .jpg-Files :)");
     let mut v :Vec<Picture> = get_pictures();
     sort_pictures(&mut v);
     rename_pictures(&mut v);
