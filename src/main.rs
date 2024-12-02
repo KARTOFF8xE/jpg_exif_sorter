@@ -41,20 +41,6 @@ impl Picture {
         Picture { path: i.to_string(), date: "Date".to_string(),
                 is_picture: i.contains(".jpg"), timestamp: None}
     }
-
-    fn printer(v: Vec<Self>) {
-        println!("The EXIF-Data of the Pictures told me:");
-        for p in v {
-            if p.is_picture {
-                println!("Path: {}\n\tDate: {}\n\t\tTimeStamp: {}", p.path, p.date,
-                    match p.timestamp {
-                        Some(i) => i.to_string(),
-                        None => "No TimeStamp".to_string(),
-                    }
-                );
-            }
-        }
-    }
 }
 
 fn get_pictures() -> Vec<Picture> { //holt alle Bilder und wandelt Sie in .JPEG um
@@ -157,16 +143,28 @@ fn rename_pictures(pictures: &mut Vec<Picture>) {
             &new_path
                 .replace(".JPEG", ".jpg"))
             .expect("Unable to rename Files");
-        picture.path = new_path;
+        //picture.path = new_path;
         pb.inc();
     }
     pb.finish_println("Renaming ... finished\n");
 }
 
+fn remove_pictures(pictures: &mut Vec<Picture>) {
+    let mut pb = ProgressBar::new(pictures.len() as u64);
+    pb.format("╢▌▌░╟");
+    println!("Removing .JPEG ... start");
+    for picture in pictures {
+        fs::remove_file(&picture.path).expect("Unable to delete old pictures, do it with > $ rm *.JPEG");
+        pb.inc();
+    }
+    pb.finish_println("Removing ... finished\n");
+}
+
 fn main() {
-    println!("Hi, I order your .jpg-Files :)");
+    println!("Hi, I will sort your .jpg-Files :)");
     let mut v :Vec<Picture> = get_pictures();
     sort_pictures(&mut v);
     rename_pictures(&mut v);
+    remove_pictures(&mut v);
     //Picture::printer(v);
 }
